@@ -133,9 +133,11 @@ def splitCombineVideo(timeFileName,videofilePath,targetN,videofileName):
 def writeToMp3(pathtoRead,direct):
 	print('Progressing. Please wait...');
 	fileList = glob.glob(pathtoRead+"/*.mp4")
+
 	if not os.path.exists(direct):
 		# Create a new directory because it does not exist
 		os.makedirs(direct)
+		print("created directory")
 
 	for fileName in fileList:
 		# Insert Local Video File Path
@@ -233,7 +235,7 @@ def trimAudiotoVideo(timeFileName,pathtoRead):
 			fileNameSplit = fileNameSplit.split(".")[1];
 			#print(fileNameSplit)
 			audioFile = get_matching_strings(fileList, fileNameSplit)[0]
-			#print("Opened: "+audioFile+""+fileNameSplit)
+			print("Opened: "+audioFile+""+fileNameSplit)
 
 			#audioFile2 = pathtoRead +"/"+ rFileName + ".mp3"
 			#print("Opened: "+audioFile+" - "+str(endtime));
@@ -246,7 +248,7 @@ def trimAudiotoVideo(timeFileName,pathtoRead):
 					videoClipName = "3_Audio_spectrum.mov";
 				
 				fileWriteName = targetN+"/"+rFileName+".mp4";
-				#print(fileWriteName)
+				print(fileWriteName)
 				# loading video dsa gfg intro video
 				aClip = mp.AudioFileClip(audioFile)
 				totalTime = aClip.duration
@@ -257,8 +259,8 @@ def trimAudiotoVideo(timeFileName,pathtoRead):
 				print(videoClip.duration)
 				videoClip = videoClip.set_audio(aClip)
 				if(len(endtime)>1):
-					videoClip = videoClip.subclip(starttime, endtime)
 					print("Start: ",starttime," End: ",endtime)
+					videoClip = videoClip.subclip(starttime, endtime)
 				#add band logo
 				
 				title = mp.ImageClip(bandLogo[0]).set_start(0).set_duration(3).set_pos(("center","center"))
