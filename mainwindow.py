@@ -213,7 +213,7 @@ def trimAudiotoVideo(timeFileName,pathtoRead):
 	if(len(bandLogo)<1):
 		print("No logo found!")
 		#exit(0)
-		bandLogo = glob.glob("C:/Users/WWW/Desktop/work/baseLogo.jpg")
+		bandLogo = glob.glob("baseLogo.jpg")
 		if(len(bandLogo)<1):
 			print("No Base logo found!")
 			exit(0)
