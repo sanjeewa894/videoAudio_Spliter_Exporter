@@ -9,6 +9,30 @@ from moviepy.video.fx.all import loop as aloop
 #import threading
 import re
 from moviepy.video.fx.resize import resize
+from PIL import Image
+
+##prevent sleep
+import ctypes
+import psutil
+import time
+
+# Windows sleep prevention flags
+ES_CONTINUOUS       = 0x80000000
+ES_SYSTEM_REQUIRED  = 0x00000001
+
+# Set your battery threshold (e.g., 30%)
+BATTERY_THRESHOLD = 30	
+
+def checkSleep():
+	battery = psutil.sensors_battery()    
+	print(f"Battery: {battery.percent}% | Plugged in: {battery.power_plugged}")
+
+	if battery.power_plugged or battery.percent > BATTERY_THRESHOLD:
+		ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)
+		print("Sleep prevention active.")
+	else:
+		ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS)
+		print("Battery low. Sleep prevention disabled.")
 
 def splitVideoToChunck(timeFileName,videofilePath,targetN,videofileName):	
 
@@ -30,6 +54,7 @@ def splitVideoToChunck(timeFileName,videofilePath,targetN,videofileName):
 	print("Opened: "+videofilePath);
 	
 	for time1 in times:
+		checkSleep()
 		starttime = (time1.split("-")[0])
 		endtime = (time1.split("-")[1])
 		
@@ -64,6 +89,7 @@ def splitVideoToAudioChunck(timeFileName,videofilePath,targetN,videofileName):
 	print("Opened: "+videofilePath);
 	
 	for time1 in times:
+		checkSleep()
 		starttime = (time1.split("-")[0])
 		endtime = (time1.split("-")[1])
 
@@ -97,6 +123,7 @@ def splitCombineVideo(timeFileName,videofilePath,targetN,videofileName):
 	print("Opened: "+videofilePath);
 	i=0
 	for time1 in times:
+		checkSleep()
 		starttime = (time1.split("-")[0])
 		endtime = (time1.split("-")[1])
 		
@@ -140,6 +167,7 @@ def writeToMp3(pathtoRead,direct):
 		print("created directory")
 
 	for fileName in fileList:
+		checkSleep()
 		# Insert Local Video File Path
 		clip = mp.VideoFileClip(fileName)
 		fileName = fileName.replace("\\","/");
@@ -165,7 +193,7 @@ def writeToNonstop(pathtoRead,direct):
 		audioArray.append(aClip)
 		print(fileName)
 	
-	
+	checkSleep()
 	final_clip = mp.concatenate_audioclips(audioArray)
 	totalTime = final_clip.duration
 	print("audio duration " , totalTime)
@@ -181,7 +209,6 @@ def get_matching_strings(lst, pattern):
 	regex = re.compile(pattern+"*",flags=re.IGNORECASE)
 	return [s for s in lst if regex.search(s)]
 
-from PIL import Image
 '''
 read the audio file from the provided audio file name
 add audio to vedio and trim.
@@ -220,7 +247,8 @@ def trimAudiotoVideo(timeFileName,pathtoRead):
 	
 	i=0
 	endtime="";
-	for time1 in times:		
+	for time1 in times:
+		checkSleep()
 		starttime = ""
 		endtime = ""
 		if(len(time1.split("-"))==3):
@@ -273,7 +301,6 @@ def trimAudiotoVideo(timeFileName,pathtoRead):
 				i += 1;
 				
 	print('Finished splitting....');
-	
 
 
 parser = argparse.ArgumentParser("Video Splitter")
@@ -285,6 +312,7 @@ parser.add_argument("-ad","--audiodir", help="audios directory path (2)", type=s
 
 args = parser.parse_args()
 type = args.type 
+
 
 if (type == 2 or type == 5):
 	#concat all files to one video 
