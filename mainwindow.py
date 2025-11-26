@@ -15,6 +15,9 @@ from PIL import Image
 import ctypes
 import psutil
 import time
+from pydub import AudioSegment
+from pathlib import Path
+
 
 # Windows sleep prevention flags
 ES_CONTINUOUS       = 0x80000000
@@ -210,6 +213,38 @@ def get_matching_strings(lst, pattern):
 	return [s for s in lst if regex.search(s)]
 
 '''
+** Boost audio 
+'''
+def boostAudio(inputAudio):
+	#inputAudio = Path(inputAudio).as_posix()
+	# 1. Load the audio using Pydub (supports various formats with ffmpeg installed)
+	audio = AudioSegment.from_file(inputAudio, format="mp3")
+	# 2. Apply a bass boost effect using filtering
+	# This example applies a low-pass filter to boost frequencies below a certain threshold (e.g., 200 Hz)
+	# The gain_db can be adjusted to control the boost level
+	boosted_audio = audio.low_pass_filter(300).apply_gain(10) # Boosts frequencies below 200Hz by 5 dB
+	boosted_audio = audio.low_pass_filter(200).apply_gain(12) # Boosts frequencies below 200Hz by 5 dB
+	boosted_audio = audio.low_pass_filter(150).apply_gain(6) # Boosts frequencies below 200Hz by 5 dB
+
+	boosted_audio = audio.overlay(boosted_audio, position=0)
+
+	# 2. Boost the volume by 10 dB (experiment with this value)
+	# Positive numbers make it louder, negative quieter.
+	volume_boost_db = 1.2
+	boosted_audio = boosted_audio + volume_boost_db
+
+	# 3. Export the boosted audio to a temporary WAV file (MoviePy works well with WAV)
+	temp_file_path = "temp_boosted_audio.wav"
+	boosted_audio.export(temp_file_path, format="wav")
+
+	# 4. Use the boosted audio with MoviePy (optional, if you need to merge with a video)
+	audio_clip = mp.AudioFileClip(temp_file_path)
+		
+	return audio_clip
+	
+
+
+'''
 read the audio file from the provided audio file name
 add audio to vedio and trim.
 write to video
@@ -278,7 +313,7 @@ def trimAudiotoVideo(timeFileName,pathtoRead):
 				fileWriteName = targetN+"/"+rFileName+".mp4";
 				print(fileWriteName)
 				# loading video dsa gfg intro video
-				aClip = mp.AudioFileClip(audioFile)
+				aClip = boostAudio(audioFile)
 				totalTime = aClip.duration
 					
 				videoClip = mp.VideoFileClip(videoClipName);
@@ -299,6 +334,10 @@ def trimAudiotoVideo(timeFileName,pathtoRead):
 				videoClip.close();
 				aClip.close();
 				i += 1;
+				
+				# 5. Clean up the temporary file from bost
+				temp_file_path = "temp_boosted_audio.wav"
+				os.remove(temp_file_path)
 				
 	print('Finished splitting....');
 
