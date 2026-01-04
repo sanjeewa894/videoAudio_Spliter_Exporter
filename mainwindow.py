@@ -26,6 +26,38 @@ ES_SYSTEM_REQUIRED  = 0x00000001
 # Set your battery threshold (e.g., 30%)
 BATTERY_THRESHOLD = 30	
 
+
+'''
+** Boost audio 
+'''
+def boostAudio(inputAudio):
+	#inputAudio = Path(inputAudio).as_posix()
+	# 1. Load the audio using Pydub (supports various formats with ffmpeg installed)
+	audio = AudioSegment.from_file(inputAudio, format="mp3")
+	# 2. Apply a bass boost effect using filtering
+	# This example applies a low-pass filter to boost frequencies below a certain threshold (e.g., 200 Hz)
+	# The gain_db can be adjusted to control the boost level
+	boosted_audio = audio.low_pass_filter(300).apply_gain(10) # Boosts frequencies below 200Hz by 5 dB
+	boosted_audio = audio.low_pass_filter(200).apply_gain(12) # Boosts frequencies below 200Hz by 5 dB
+	boosted_audio = audio.low_pass_filter(150).apply_gain(6) # Boosts frequencies below 200Hz by 5 dB
+
+	boosted_audio = audio.overlay(boosted_audio, position=0)
+
+	# 2. Boost the volume by 10 dB (experiment with this value)
+	# Positive numbers make it louder, negative quieter.
+	volume_boost_db = 1.2
+	boosted_audio = boosted_audio + volume_boost_db
+
+	# 3. Export the boosted audio to a temporary WAV file (MoviePy works well with WAV)
+	temp_file_path = "temp_boosted_audio.wav"
+	boosted_audio.export(temp_file_path, format="wav")
+
+	# 4. Use the boosted audio with MoviePy (optional, if you need to merge with a video)
+	audio_clip = mp.AudioFileClip(temp_file_path)
+		
+	return audio_clip
+	
+
 def checkSleep():
 	battery = psutil.sensors_battery()    
 	print(f"Battery: {battery.percent}% | Plugged in: {battery.power_plugged}")
@@ -147,7 +179,9 @@ def splitCombineVideo(timeFileName,videofilePath,targetN,videofileName):
 		videoClip = mp.VideoFileClip(videoClipName);
 
 		clip2 = clip.subclip(starttime, endtime)
-		audiotoWrite = clip2.audio
+		
+		audiotoWrite = boostAudio(clip2.audio) #boost audio
+		
 		totalTime = audiotoWrite.duration
 		print("audio duration " , totalTime, videoClipName, i )
 		videoClip = aloop(videoClip,duration=totalTime)
@@ -211,37 +245,6 @@ def writeToNonstop(pathtoRead,direct):
 def get_matching_strings(lst, pattern):
 	regex = re.compile(pattern+"*",flags=re.IGNORECASE)
 	return [s for s in lst if regex.search(s)]
-
-'''
-** Boost audio 
-'''
-def boostAudio(inputAudio):
-	#inputAudio = Path(inputAudio).as_posix()
-	# 1. Load the audio using Pydub (supports various formats with ffmpeg installed)
-	audio = AudioSegment.from_file(inputAudio, format="mp3")
-	# 2. Apply a bass boost effect using filtering
-	# This example applies a low-pass filter to boost frequencies below a certain threshold (e.g., 200 Hz)
-	# The gain_db can be adjusted to control the boost level
-	boosted_audio = audio.low_pass_filter(300).apply_gain(10) # Boosts frequencies below 200Hz by 5 dB
-	boosted_audio = audio.low_pass_filter(200).apply_gain(12) # Boosts frequencies below 200Hz by 5 dB
-	boosted_audio = audio.low_pass_filter(150).apply_gain(6) # Boosts frequencies below 200Hz by 5 dB
-
-	boosted_audio = audio.overlay(boosted_audio, position=0)
-
-	# 2. Boost the volume by 10 dB (experiment with this value)
-	# Positive numbers make it louder, negative quieter.
-	volume_boost_db = 1.2
-	boosted_audio = boosted_audio + volume_boost_db
-
-	# 3. Export the boosted audio to a temporary WAV file (MoviePy works well with WAV)
-	temp_file_path = "temp_boosted_audio.wav"
-	boosted_audio.export(temp_file_path, format="wav")
-
-	# 4. Use the boosted audio with MoviePy (optional, if you need to merge with a video)
-	audio_clip = mp.AudioFileClip(temp_file_path)
-		
-	return audio_clip
-	
 
 
 '''
