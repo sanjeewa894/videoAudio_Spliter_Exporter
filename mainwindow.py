@@ -140,7 +140,7 @@ def splitVideoToAudioChunck(timeFileName,videofilePath,targetN,videofileName):
 		clip.close();
 	print('Finished splitting....');
 
-def splitCombineVideo(timeFileName,videofilePath,targetN,videofileName):
+def splitCombineVideo(timeFileName,videofilePath,targetN,videofileName, boostUse=True):
 	
 	if not os.path.exists(targetN):
 		os.makedirs(targetN)
@@ -183,22 +183,28 @@ def splitCombineVideo(timeFileName,videofilePath,targetN,videofileName):
 
 		clip2 = clip.subclip(starttime, endtime)
 		
-		#write to temp audio file
-		clip2.audio.write_audiofile(boostAudioFile);
+		if(boostUse):
+			#write to temp audio file
+			clip2.audio.write_audiofile(boostAudioFile);		
+			audiotoWrite = boostAudio(boostAudioFile)
+			totalTime = audiotoWrite.duration
+			print("audio duration " , totalTime, videoClipName, i )
+			videoClip = aloop(videoClip,duration=totalTime)
+			print(videoClip.duration)
+			videoClip = videoClip.set_audio(audiotoWrite)
+			videoClip.write_videofile(fileWriteName);		
 		
-		audiotoWrite = boostAudio(boostAudioFile)
-		
-		totalTime = audiotoWrite.duration
-		print("audio duration " , totalTime, videoClipName, i )
-		videoClip = aloop(videoClip,duration=totalTime)
-		print(videoClip.duration)
-		videoClip = videoClip.set_audio(audiotoWrite)
-		videoClip.write_videofile(fileWriteName);
-		
-		
-		# Clean up the temporary file from bost
-		
-		os.remove(boostAudioFile)
+			# Clean up the temporary file from bost
+			os.remove(boostAudioFile)
+			
+		else:
+			totalTime = clip2.duration
+			print("audio duration " , totalTime, videoClipName, i )
+			videoClip = aloop(videoClip,duration=totalTime)
+			print(videoClip.duration)
+			videoClip = videoClip.set_audio(clip2.audio)
+			videoClip.write_videofile(fileWriteName);		
+				
 		
 		i += 1;
 	clip.close();
@@ -263,7 +269,7 @@ read the audio file from the provided audio file name
 add audio to vedio and trim.
 write to video
 '''
-def trimAudiotoVideo(timeFileName,pathtoRead):
+def trimAudiotoVideo(timeFileName,pathtoRead,boostUse=True):
 	
 	targetN = pathtoRead + "/processed";
 	print("Write location: " +targetN)
@@ -326,14 +332,20 @@ def trimAudiotoVideo(timeFileName,pathtoRead):
 				
 				fileWriteName = targetN+"/"+rFileName+".mp4";
 				print(fileWriteName)
-				# loading video dsa gfg intro video
-				aClip = boostAudio(audioFile)
+				# loading video.. boost audio in video
+				
+				if(boostUse):
+					aClip = boostAudio(audioFile)
+				else:
+					aClip = mp.AudioFileClip(fileName)
+				
 				totalTime = aClip.duration
 					
 				videoClip = mp.VideoFileClip(videoClipName);
 				print("audio duration " , totalTime, videoClipName, i )
 				videoClip = aloop(videoClip,duration=totalTime)
 				print(videoClip.duration)
+				
 				videoClip = videoClip.set_audio(aClip)
 				if(len(endtime)>1):
 					print("Start: ",starttime," End: ",endtime)
@@ -350,8 +362,9 @@ def trimAudiotoVideo(timeFileName,pathtoRead):
 				i += 1;
 				
 				# 5. Clean up the temporary file from bost
-				temp_file_path = "temp_boosted_audio.wav"
-				os.remove(temp_file_path)
+				if(boostUse):
+					temp_file_path = "temp_boosted_audio.wav"
+					os.remove(temp_file_path)
 				
 	print('Finished splitting....');
 
@@ -414,7 +427,11 @@ def boostAudioInVideo(pathtoRead):
 
 
 parser = argparse.ArgumentParser("Video Splitter")
-parser.add_argument("-t","--type", help="video split (1) or audio convert (2) or audio (3) or audio+video combine (4) or audios to nonstop(5) or audio trim and to video(6) or boost audio in video(7)", type=int,required = False, default = "")
+parser.add_argument("-t","--type", help="video split (1) or audio convert (2) or audio (3) \
+									or split video with boost (4) or audios to nonstop(5) or  \
+									single single audio trim to video with boost(6) or boost audio in video(7)  \
+									or split video without boost (8) or single audio trim to video(9) without boost" , 
+									type=int,required = False, default = "")
 parser.add_argument("-tf","--timefile", help="time file path (1)", type=str,required = False, default = "")
 parser.add_argument("-vf","--videofile", help="video file path (1)", type=str,required = False, default = "")
 parser.add_argument("-vd","--videodir", help="videos directory path (2)", type=str,required = False, default = "")
@@ -457,7 +474,7 @@ if (type == 2 or type == 5):
 		print("Run audio concat")
 		writeToNonstop(pathtoRead,direct)
 
-elif (type == 1 or type == 3 or type == 4):
+elif (type == 1 or type == 3 or type == 4 or type == 8):
 	if(len(sys.argv) <6):
 		print("Run with -h to find arguments")
 		exit(1)
@@ -493,9 +510,11 @@ elif (type == 1 or type == 3 or type == 4):
 	elif(type == 3):
 		splitVideoToAudioChunck(tfname,vfname,targetN,videofileName)
 	elif(type == 4):
-		splitCombineVideo(tfname,vfname,targetN,videofileName)
+		splitCombineVideo(tfname,vfname,targetN,videofileName) #use BOOST
+	elif(type == 8):
+		splitCombineVideo(tfname,vfname,targetN,videofileName, False) #without BOOST
 	
-elif(type == 6):
+elif(type == 6 or type == 9):
 	#trim audio and write to video 
 	print("Run audio trim and to video")
 	if(len(sys.argv) <6):
@@ -513,7 +532,10 @@ elif(type == 6):
 		print("Directory not found!");
 		exit(1);
 			
-	trimAudiotoVideo(tfname,pathtoRead)
+	if(type == 9):
+		trimAudiotoVideo(tfname,pathtoRead,False) #without BOOST
+	else:
+		trimAudiotoVideo(tfname,pathtoRead) #with BOOST
 	
 elif (type == 7):
 	#boost audio in video files from directory
