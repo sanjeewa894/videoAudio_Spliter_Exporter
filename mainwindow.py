@@ -37,15 +37,16 @@ def boostAudio(inputAudio):
 	# 2. Apply a bass boost effect using filtering
 	# This example applies a low-pass filter to boost frequencies below a certain threshold (e.g., 200 Hz)
 	# The gain_db can be adjusted to control the boost level
-	boosted_audio = audio.low_pass_filter(300).apply_gain(10) # Boosts frequencies below 200Hz by 5 dB
-	boosted_audio = audio.low_pass_filter(200).apply_gain(12) # Boosts frequencies below 200Hz by 5 dB
-	boosted_audio = audio.low_pass_filter(150).apply_gain(6) # Boosts frequencies below 200Hz by 5 dB
+	boosted_audio = audio.low_pass_filter(300).apply_gain(3) # Boosts frequencies below 200Hz by 5 dB
+	boosted_audio = audio.low_pass_filter(200).apply_gain(4) # Boosts frequencies below 200Hz by 5 dB
+	boosted_audio = audio.low_pass_filter(150).apply_gain(2) # Boosts frequencies below 200Hz by 5 dB
+
 
 	boosted_audio = audio.overlay(boosted_audio, position=0)
 
 	# 2. Boost the volume by 10 dB (experiment with this value)
 	# Positive numbers make it louder, negative quieter.
-	volume_boost_db = 1.2
+	volume_boost_db = 1.1
 	boosted_audio = boosted_audio + volume_boost_db
 
 	# 3. Export the boosted audio to a temporary WAV file (MoviePy works well with WAV)
@@ -120,10 +121,11 @@ def splitVideoToAudioChunck(timeFileName,videofilePath,targetN,videofileName):
 		exit(1);
 		
 	# loading video dsa gfg intro video
-	clip = mp.VideoFileClip(videofilePath);
+	
 	print("Opened: "+videofilePath);
 	
 	for time1 in times:
+		clip = mp.VideoFileClip(videofilePath);
 		checkSleep()
 		starttime = (time1.split("-")[0])
 		endtime = (time1.split("-")[1])
@@ -135,7 +137,7 @@ def splitVideoToAudioChunck(timeFileName,videofilePath,targetN,videofileName):
 		clip2.audio.write_audiofile(targetN+"/"+videofileName+str(times.index(time1)+1)+".mp3");
 		clip2.close();
 		
-	clip.close();
+		clip.close();
 	print('Finished splitting....');
 
 def splitCombineVideo(timeFileName,videofilePath,targetN,videofileName):
@@ -157,6 +159,7 @@ def splitCombineVideo(timeFileName,videofilePath,targetN,videofileName):
 	clip = mp.VideoFileClip(videofilePath);
 	print("Opened: "+videofilePath);
 	i=0
+	boostAudioFile = "boostAudioTemp.mp3"
 	for time1 in times:
 		checkSleep()
 		starttime = (time1.split("-")[0])
@@ -180,7 +183,10 @@ def splitCombineVideo(timeFileName,videofilePath,targetN,videofileName):
 
 		clip2 = clip.subclip(starttime, endtime)
 		
-		audiotoWrite = boostAudio(clip2.audio) #boost audio
+		#write to temp audio file
+		clip2.audio.write_audiofile(boostAudioFile);
+		
+		audiotoWrite = boostAudio(boostAudioFile)
 		
 		totalTime = audiotoWrite.duration
 		print("audio duration " , totalTime, videoClipName, i )
@@ -188,6 +194,11 @@ def splitCombineVideo(timeFileName,videofilePath,targetN,videofileName):
 		print(videoClip.duration)
 		videoClip = videoClip.set_audio(audiotoWrite)
 		videoClip.write_videofile(fileWriteName);
+		
+		
+		# Clean up the temporary file from bost
+		
+		os.remove(boostAudioFile)
 		
 		i += 1;
 	clip.close();
@@ -345,8 +356,65 @@ def trimAudiotoVideo(timeFileName,pathtoRead):
 	print('Finished splitting....');
 
 
+'''
+read the video files from the directory
+boost the audio and set the audio to the loaded video.
+write to video
+'''
+def boostAudioInVideo(pathtoRead):
+	
+	targetN = pathtoRead + "/processed";
+	print("Write location: " +targetN)
+	if not os.path.exists(targetN):
+		os.makedirs(targetN)
+
+	print('Progressing. Please wait...');
+		
+	fileList = glob.glob(pathtoRead+"/*.mp4")
+	if(len(fileList)<1):
+		print("No mp4 found!")
+		exit(1);
+	
+	
+	boostAudioFile = "boostAudioTemp.mp3"
+	i=0
+	
+	for rFileName in fileList:
+		checkSleep()
+					
+		#print(fileNameSplit)
+		print("Opened: "+ rFileName)
+
+		if (os.path.exists(rFileName)):				
+			#change the file path
+			fileName = rFileName.replace("\\","/"); 
+			output =  ((fileName.split("/")[-1])) #get file name
+			
+			fileWriteName = targetN+"/"+output;
+			print(fileWriteName)
+			
+			videoClip = mp.VideoFileClip(rFileName);
+			
+			#write to temp audio file
+			videoClip.audio.write_audiofile(boostAudioFile);
+		
+			audiotoWrite = boostAudio(boostAudioFile)
+						
+			videoClip = videoClip.set_audio(audiotoWrite)
+
+			videoClip.write_videofile(fileWriteName);
+			
+			videoClip.close();
+			i += 1;
+			
+			os.remove(boostAudioFile)
+				
+	print('Finished boosting....');
+
+
+
 parser = argparse.ArgumentParser("Video Splitter")
-parser.add_argument("-t","--type", help="video split (1) or audio convert (2) or audio (3) or audio+video combine (4) or audios to nonstop(5) or audio trim and to video(6)", type=int,required = False, default = "")
+parser.add_argument("-t","--type", help="video split (1) or audio convert (2) or audio (3) or audio+video combine (4) or audios to nonstop(5) or audio trim and to video(6) or boost audio in video(7)", type=int,required = False, default = "")
 parser.add_argument("-tf","--timefile", help="time file path (1)", type=str,required = False, default = "")
 parser.add_argument("-vf","--videofile", help="video file path (1)", type=str,required = False, default = "")
 parser.add_argument("-vd","--videodir", help="videos directory path (2)", type=str,required = False, default = "")
@@ -447,3 +515,26 @@ elif(type == 6):
 			
 	trimAudiotoVideo(tfname,pathtoRead)
 	
+elif (type == 7):
+	#boost audio in video files from directory
+
+	print("Run arg check")
+	pathtoRead = args.videodir
+	if(len(sys.argv) < 3 or not pathtoRead):
+		print("Run with -h to find arguments")
+		exit(1)
+	if not os.path.exists(pathtoRead):
+		print("Directory not found!");
+		exit(1);
+			
+	direct = args.videodir + "/boosted"
+	#check directory contains videos
+	fileList = glob.glob(pathtoRead+"/*.mp4")
+		
+		
+	if(len(fileList)<1):
+			print("No MP4 file found....");
+			exit(1);
+	
+	print("Run audio boost")
+	boostAudioInVideo(pathtoRead)
