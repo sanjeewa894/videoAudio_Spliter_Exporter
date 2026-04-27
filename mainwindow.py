@@ -41,13 +41,7 @@ def boostAudio(inputAudio):
 	boosted_audio = audio.low_pass_filter(200).apply_gain(4) # Boosts frequencies below 200Hz by 5 dB
 	boosted_audio = audio.low_pass_filter(150).apply_gain(2) # Boosts frequencies below 200Hz by 5 dB
 
-
 	boosted_audio = audio.overlay(boosted_audio, position=0)
-
-	# 2. Boost the volume by 10 dB (experiment with this value)
-	# Positive numbers make it louder, negative quieter.
-	volume_boost_db = 1.1
-	boosted_audio = boosted_audio + volume_boost_db
 
 	# 3. Export the boosted audio to a temporary WAV file (MoviePy works well with WAV)
 	temp_file_path = "temp_boosted_audio.wav"
